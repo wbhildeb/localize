@@ -1,4 +1,4 @@
-# localize-cs
+# localize
 This program (originally designed for my CS246 class at UWaterloo) is intended for maintaining and syncing a local version of a remote environment.
 
 ## Setup
