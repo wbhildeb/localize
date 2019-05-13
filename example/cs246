@@ -1,0 +1,13 @@
+readonly LCL_USERNAME=wbhildeb
+readonly LCL_LOCALHOME=~/School/UW2A/CS246/Remote/
+readonly LCL_REMOTEHOME=/u0/wbhildebrand/cs246/1189/
+readonly LCL_SERVER=linux.student.cs.uwaterloo.ca
+
+##### OPTION 1 - Absolute Path (Recommended)
+#source ~/path/to/localize.sh
+
+
+##### OPTION 2 - Relative Path (Not Recommended)
+# cd to the directory of this file (doesn't move user because it's in a new shell)
+cd $(dirname $BASH_SOURCE)
+source ../localize.sh

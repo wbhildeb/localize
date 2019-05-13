@@ -1,29 +1,23 @@
 #!/bin/bash
 
-# cs246
+# localize 2019-05-13
 # created by Walker Hildebrand
-# last updated 2018-10-20
+
+# This file is the core of the program but should not be run on its own, it is meant to be used by customized executables
 
 # This purpose of this program is to aid with working on UWaterloo computer science
 #   projects locally. After setting up a folder to contain copies of all of the
 #   files on the server, you can use this program to keep your local folder and
 #   your remote directory in sync.
 
-# --- Edit the Below Constants to your liking ----------------------
-readonly CS246_USERNAME=wbhildeb
-readonly CS246_LOCALCSHOME=~/CSHOME/
-readonly CS246_REMOTECSHOME=/u#/username/cs246/1189/
 # ------------------------------------------------------------------
 
-
-readonly CS246_CMDNAME=$(basename $0)
-readonly CS246_SERVER=linux.student.cs.uwaterloo.ca
-readonly CS246_CONNECTION=${CS246_USERNAME}@${CS246_SERVER}
-
+readonly LCL_CMDNAME=$(basename $0)
+readonly LCL_CONNECTION=${LCL_USERNAME}@${LCL_SERVER}
 
 if [ $# == 0 ]; then
-  echo "Usage: $CS246_CMDNAME command [arguments]" >&2
-  echo "Example: $CS246_CMDNAME exec -o ls"
+  echo "Usage: $LCL_CMDNAME command [arguments]" >&2
+  echo "Example: $LCL_CMDNAME exec -o ls"
   exit -1
 fi
 
@@ -41,7 +35,7 @@ function UTIL_getLocalPath
   relative_path=${1#.}
   relative_path=${relative_path#/}
 
-  echo ${CS246_LOCALCSHOME}${relative_path}
+  echo ${LCL_LOCALHOME%/}/${relative_path}
 }
 
 function UTIL_getRemotePath
@@ -57,14 +51,14 @@ function UTIL_getRemotePath
   relative_path=${1#.}
   relative_path=${relative_path#/}
 
-  echo ${CS246_REMOTECSHOME}${relative_path}
+  echo ${LCL_REMOTEHOME%/}/${relative_path}
 }
  
 
-function CS246_exec
+function LCL_exec
 {
-  func_name=${FUNCNAME[0]#CS246_}
-  usage="Usage: $CS246_CMDNAME $func_name [option] command"
+  func_name=${FUNCNAME[0]#LCL_}
+  usage="Usage: $LCL_CMDNAME $func_name [option] command"
 
   keep_connection_open=false
 
@@ -87,39 +81,40 @@ function CS246_exec
     args=$@ # need the temp var or all semicolons at the ends of words will be removed
     command=${args%;}\;
   fi
-
+  
+  flags="-Y"
   if [ $keep_connection_open = "true" ]; then
-    flags="-t"
+    flags=${flags}" -t"
     command="$command bash --login" 
   fi
 
-  ssh $flags $CS246_CONNECTION "cd $CS246_REMOTECSHOME; $command"
+  ssh $flags $LCL_CONNECTION "cd $LCL_REMOTEHOME; $command"
 }
 
 
-function CS246_connect
+function LCL_connect
 {
-  func_name=${FUNCNAME[0]#CS246_}
-  usage="Usage: $CS246_CMDNAME $func_name"
+  func_name=${FUNCNAME[0]#LCL_}
+  usage="Usage: $LCL_CMDNAME $func_name"
 
   if [ $# != 0 ]; then
     echo $usage >&2
     exit 1;
   fi
 
-  CS246_exec -o
+  LCL_exec -o
 }
 
 
-function CS246_pull
+function LCL_pull
 {
-  func_name=${FUNCNAME[0]#CS246_}
-  usage="Usage: $CS246_CMDNAME $func_name [filepath]\nNOTE: file path should be relative to cshome and should start with './'"
+  func_name=${FUNCNAME[0]#LCL_}
+  usage="Usage: $LCL_CMDNAME $func_name [filepath]\nNOTE: file path should be relative to lclhome and should start with './'"
 
   if [ $# -gt 1 ]; then
     for file in $@; do
       echo $file
-      CS246_pull $file
+      LCL_pull $file
     done;
     exit 0;
   fi
@@ -133,38 +128,38 @@ function CS246_pull
   local_path=$(UTIL_getLocalPath $relative_path)
   remote_path=$(UTIL_getRemotePath $relative_path)
 
-  file_type=$(CS246_exec "stat --format=%F $relative_path 2>/dev/null")
+  file_type=$(LCL_exec "stat --format=%F $relative_path 2>/dev/null")
   
   if [ "$file_type" == "directory" ]; then
     if [ ! -d $local_path ]; then
       mkdir -p $local_path;
     fi
-    scp -r ${CS246_CONNECTION}:${remote_path%/}/* ${local_path}
+    scp -r ${LCL_CONNECTION}:${remote_path%/}/* ${local_path}
   elif [ "$file_type" == "regular file" ]; then
     if [ ! -d $(dirname $local_path) ]; then
       mkdir -p $local_path;
     fi
-    scp ${CS246_CONNECTION}:${remote_path} $local_path
+    scp ${LCL_CONNECTION}:${remote_path} $local_path
   elif [ "$file_type" == "" ]; then
-    echo "Error: file '${CS246_CONNECTION}:${remote_path}' does not exist"
+    echo "Error: file '${LCL_CONNECTION}:${remote_path}' does not exist"
     exit 1
   else
     while read file_to_pull; do
-      CS246_pull $file_to_pull </dev/null
-    done < <(CS246_exec "ls -1 $relative_path")
+      LCL_pull $file_to_pull </dev/null
+    done < <(LCL_exec "ls -1 $relative_path")
   fi
 }
 
 
-function CS246_push
+function LCL_push
 {
-  func_name=${FUNCNAME[0]#CS246_}
-  usage="Usage: $CS246_CMDNAME $func_name [filepath]\nNOTE: file path should be relative to cshome and should start with './'"
+  func_name=${FUNCNAME[0]#LCL_}
+  usage="Usage: $LCL_CMDNAME $func_name [filepath]\nNOTE: file path should be relative to lclhome and should start with './'"
 
   if [ $# -gt 1 ]; then
     for file in $@; do
       echo $file
-      CS246_push $file
+      LCL_push $file
     done;
     exit 0;
   fi
@@ -177,31 +172,31 @@ function CS246_push
 
   remote_path=$(UTIL_getRemotePath $relative_path)
 
-  cd $CS246_LOCALCSHOME
+  cd $LCL_LOCALHOME
   file_type=$(stat -f%HT ${relative_path} 2>/dev/null)
 
   if [ "$file_type" == "Directory" ]; then
-    if $(CS246_exec "[ ! -d $relative_path ]"); then
-      CS246_exec "mkdir -p $relative_path"
+    if $(LCL_exec "[ ! -d $relative_path ]"); then
+      LCL_exec "mkdir -p $relative_path"
     fi
-    scp -r ${relative_path%/}/* ${CS246_CONNECTION}:${remote_path}
+    scp -r ${relative_path%/}/* ${LCL_CONNECTION}:${remote_path}
   elif [ "$file_type" == "Regular File" ]; then
-    if $(CS246_exec "[ ! -d $(dirname $relative_path) ]"); then
-      CS246_exec "mkdir -p $relative_path"
+    if $(LCL_exec "[ ! -d $(dirname $relative_path) ]"); then
+      LCL_exec "mkdir -p $relative_path"
     fi
-    scp $relative_path ${CS246_CONNECTION}:${remote_path}
+    scp $relative_path ${LCL_CONNECTION}:${remote_path}
   elif [ "$file_type" == "" ]; then
     echo "Error: file '$(UTIL_getRemotePath $relative_path)' does not exist"
     exit 1
   else
     while read file_to_push; do
-      CS246_push $file_to_push </dev/null
+      LCL_push $file_to_push </dev/null
     done < <(ls -1 $relative_path)
   fi
 }
 
 
-function CS246_diff_formatFileStruct
+function LCL_diff_formatFileStruct
 {
   curdir="./"
   while read line || [[ -n "$line" ]]; do
@@ -214,10 +209,10 @@ function CS246_diff_formatFileStruct
 }
 
 
-function CS246_diff
+function LCL_diff
 {
-  func_name=${FUNCNAME[0]#CS246_}
-  usage="Usage: $CS246_CMDNAME $func_name"
+  func_name=${FUNCNAME[0]#LCL_}
+  usage="Usage: $LCL_CMDNAME $func_name"
   
   if [ $# != 0 ]; then
     echo $usage
@@ -229,10 +224,10 @@ function CS246_diff
   _file_struc_diff=$(mktemp)
   _files_to_compare=$(mktemp)
 
-  CS246_exec "ls -R" | tail -n +2 | CS246_diff_formatFileStruct | sort > $_remote_file_struc
+  LCL_exec "ls -R" | tail -n +2 | LCL_diff_formatFileStruct | sort > $_remote_file_struc
   
-  cd $CS246_LOCALCSHOME
-  ls -R | CS246_diff_formatFileStruct | sort > $_local_file_struc
+  cd $LCL_LOCALHOME
+  ls -R | LCL_diff_formatFileStruct | sort > $_local_file_struc
 
   while read line || [[ -n "$line" ]]; do
     if [[ "$line" == "> "* ]]; then
@@ -252,18 +247,18 @@ function CS246_diff
   done < $_local_file_struc
 
   shafilename=".filestosha"
-  scp $_files_to_compare ${CS246_CONNECTION}:${CS246_REMOTECSHOME}${shafilename} &>/dev/null
+  scp $_files_to_compare ${LCL_CONNECTION}:${LCL_REMOTEHOME}${shafilename} &>/dev/null
 
   while read line; do
     r_sha=$(echo $line | awk '{print $1}')
     file_to_sha=$(echo $line | awk '{print $2}')
-    l_sha=$(shasum ${CS246_LOCALCSHOME}${file_to_sha#./} | awk '{print $1}')
+    l_sha=$(shasum ${LCL_LOCALHOME}${file_to_sha#./} | awk '{print $1}')
     if [ "$l_sha" != "$r_sha" ]; then
       echo d: $file_to_sha
     fi
-  done < <(CS246_exec "while read file; do shasum \$file; done <$shafilename;")
+  done < <(LCL_exec "while read file; do shasum \$file; done <$shafilename;")
 
-  CS246_exec "rm $shafilename"
+  LCL_exec "rm $shafilename"
   rm $_files_to_compare
   rm $_remote_file_struc
   rm $_local_file_struc
@@ -271,9 +266,9 @@ function CS246_diff
 }
 
 
-function CS246_sync
+function LCL_sync
 {
-  cd $CS246_LOCALCSHOME
+  cd $LCL_LOCALHOME
   echo "WARNING: All actions are recursive, so if you copy/remove a folder, all contents will also be copied/removed."
 
   while read line; do
@@ -296,11 +291,11 @@ function CS246_sync
               break
               ;;
             r|pull)
-              CS246_pull $file;
+              LCL_pull $file;
               break
               ;;
             l|delete)
-              CS246_exec "rm -r $file; if $?; then echo file deleted remotely; fi"
+              LCL_exec "rm -r $file; if $?; then echo file deleted remotely; fi"
               break
               ;;
             *)
@@ -329,7 +324,7 @@ function CS246_sync
               break
               ;;
             l|push)
-              CS246_push $file
+              LCL_push $file
               break
               ;;
             *)
@@ -353,11 +348,11 @@ function CS246_sync
               break
               ;;
             r|pull)
-              CS246_pull $file
+              LCL_pull $file
               break
               ;;
             l|push)
-              CS246_push $file
+              LCL_push $file
               break
               ;;
             *)
@@ -366,21 +361,21 @@ function CS246_sync
         done
         ;;
     esac
-  done < <(CS246_diff)
+  done < <(LCL_diff)
   echo finished syncing!
 }
 
-function CS246_get
+function LCL_get
 {
-  func_name=${FUNCNAME[0]#CS246_}
-  usage="Usage: $CS246_CMDNAME $func_name value\n Try using 'localhome', 'remotehome', 'user' or 'server' for the value"
+  func_name=${FUNCNAME[0]#LCL_}
+  usage="Usage: $LCL_CMDNAME $func_name value\n Try using 'localhome', 'remotehome', 'user' or 'server' for the value"
 
   if [ $# -eq 0 ]; then
-    echo "Local Home:   " $CS246_LOCALCSHOME
-    echo "Remote Home:  " $CS246_REMOTECSHOME
-    echo "Username:     " $CS246_USERNAME
-    echo "Server:       " $CS246_SERVER
-    echo "Connection:   " $CS246_CONNECTION
+    echo "Local Home:   " $LCL_LOCALHOME
+    echo "Remote Home:  " $LCL_REMOTEHOME
+    echo "Username:     " $LCL_USERNAME
+    echo "Server:       " $LCL_SERVER
+    echo "Connection:   " $LCL_CONNECTION
     exit 0
   elif [ $# -gt 1 ]; then
     echo $usage >&2
@@ -389,19 +384,19 @@ function CS246_get
 
   case $(echo $1 | tr '[:upper:]' '[:lower:]') in
     local_home|localhome|local|home|lhome|lh|h)
-      echo $CS246_LOCALCSHOME
+      echo $LCL_LOCALHOME
       ;;
     remote_home|remotehome|remote|rhome|rh)
-      echo $CS246_REMOTECSHOME
+      echo $LCL_REMOTEHOME
       ;;
     username|user|usr|u)
-      echo $CS246_USERNAME
+      echo $LCL_USERNAME
       ;;
     server|svr|s)
-      echo $CS246_SERVER
+      echo $LCL_SERVER
       ;;
     connection|connect|con|c)
-      echo $CS246_CONNECTION
+      echo $LCL_CONNECTION
       ;;
     *)
       echo "No variable '$1' to get" >&2
@@ -411,7 +406,7 @@ function CS246_get
 }
 
 if [[ $1 =~ ^(exec|connect|pull|push|diff|sync|get)$ ]]; then
-  CS246_$1 ${@#$1}
+  LCL_$1 ${@#$1}
 else
   echo "Error: '$cmd_name $1' is not a valid command" >&2
 fi
